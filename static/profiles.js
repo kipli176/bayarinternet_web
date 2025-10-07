@@ -106,6 +106,9 @@ $("filterProfilePerPage")?.addEventListener("change", e => {
 // =========================================================
 // 🔹 Tambah Paket (POST /profiles)
 // =========================================================
+// =========================================================
+// 🔹 Tambah Paket (POST /profiles) + tipe baru "calculator"
+// =========================================================
 $("btnAddProfile")?.addEventListener("click", () => {
   openModal({
     title: "Tambah Paket Internet",
@@ -114,12 +117,17 @@ $("btnAddProfile")?.addEventListener("click", () => {
         <select id="profileType" class="w-full border p-2 rounded">
           <option value="group">Group</option>
           <option value="custom">Custom Speed</option>
+          <option value="calculator">Calculator</option>
         </select>
         <input id="profileName" placeholder="Nama Paket" class="w-full border p-2 rounded">
         <input id="profilePrice" type="number" placeholder="Harga" class="w-full border p-2 rounded">
+        
+        <!-- Group Fields -->
         <div id="groupFields" class="space-y-2">
           <input id="groupName" placeholder="Nama Group" class="w-full border p-2 rounded">
         </div>
+
+        <!-- Custom Fields -->
         <div id="customFields" class="hidden space-y-2">
           <input id="rateUp" placeholder="Rate Limit Up (10M)" class="w-full border p-2 rounded">
           <input id="rateDown" placeholder="Rate Limit Down (10M)" class="w-full border p-2 rounded">
@@ -131,7 +139,19 @@ $("btnAddProfile")?.addEventListener("click", () => {
           <input id="minUp" placeholder="Min Rate Up" class="w-full border p-2 rounded">
           <input id="minDown" placeholder="Min Rate Down" class="w-full border p-2 rounded">
         </div>
+
+        <!-- Calculator Fields -->
+        <div id="calculatorFields" class="hidden space-y-2">
+          <select id="calcUp" class="w-full border p-2 rounded"></select>
+          <select id="calcDown" class="w-full border p-2 rounded"></select>
+          <textarea id="calcOut" readonly class="w-full border p-2 rounded bg-gray-100 text-xs"></textarea>
+          <p class="text-xs text-gray-500">
+            Rumus: <b>Burst</b> = 3×Rate, <b>Threshold</b> = 70%×Rate, 
+            <b>Min Rate</b> = 60%×Rate, <b>Priority</b> = 8, <b>Burst Time</b> = 12/12.
+          </p>
+        </div>
       </div>`,
+
     onSave: async () => {
       const type = $("profileType").value;
       const name = $("profileName").value.trim();
@@ -139,9 +159,11 @@ $("btnAddProfile")?.addEventListener("click", () => {
       if (!name || !price) return toast("❗ Lengkapi nama dan harga");
 
       const data = { name, price, is_active: true };
+
       if (type === "group") {
         data.group_name = $("groupName").value.trim();
       } else {
+        // custom dan calculator menggunakan field yang sama
         Object.assign(data, {
           rate_limit_up: $("rateUp").value.trim(),
           rate_limit_down: $("rateDown").value.trim(),
@@ -167,38 +189,100 @@ $("btnAddProfile")?.addEventListener("click", () => {
 
         // Efek highlight hijau pada baris pertama
         setTimeout(() => {
-        const firstRow = $("profileTable")?.querySelector("tr");
-        if (firstRow) {
+          const firstRow = $("profileTable")?.querySelector("tr");
+          if (firstRow) {
             firstRow.classList.add("added");
             setTimeout(() => firstRow.classList.remove("added"), 800);
-        }
+          }
         }, 100);
-
 
         // Sinkronisasi ke server penuh
         setTimeout(() => loadProfiles(), 1000);
-        } catch {
+      } catch {
         toast("⚠️ Offline: data disimpan lokal");
         addPendingProfileOp("add", data);
         closeModal();
         profiles.unshift(data);
         renderProfiles();
-        }
-
+      }
     },
   });
 
+  // =========================================================
+  // 🔸 Event: Switch tipe profile (group/custom/calculator)
+  // =========================================================
   $("profileType").addEventListener("change", e => {
     const type = e.target.value;
-    if (type === "custom") {
-      show($("customFields"));
-      hide($("groupFields"));
-    } else {
-      hide($("customFields"));
-      show($("groupFields"));
-    }
+    hide($("groupFields"));
+    hide($("customFields"));
+    hide($("calculatorFields"));
+
+    if (type === "group") show($("groupFields"));
+    else if (type === "custom") show($("customFields"));
+    else if (type === "calculator") show($("calculatorFields"));
   });
+
+  // =========================================================
+  // 🔸 Calculator logic (auto isi custom fields)
+  // =========================================================
+  const calcUp = $("calcUp");
+  const calcDown = $("calcDown");
+  const calcOut = $("calcOut");
+
+  if (calcUp && calcDown) {
+    // isi select 3–60 Mbps
+    for (let v = 3; v <= 60; v += 3) {
+      calcUp.appendChild(new Option(`${v} Mbps`, v));
+      calcDown.appendChild(new Option(`${v} Mbps`, v));
+    }
+
+    const burstFactor = 3.0;
+    const thresholdPct = 0.7;
+    const minRatePct = 0.6;
+    const burstTime = 12;
+    const priority = 8;
+
+    function fmt(bps) {
+      const Mbps = bps / 1_000_000;
+      return Mbps >= 1 ? Math.round(Mbps) + "M" : Math.round(bps / 1_000) + "K";
+    }
+
+    function updateCalc() {
+      const upMbps = +calcUp.value || 3;
+      const downMbps = +calcDown.value || 3;
+      const upBps = upMbps * 1_000_000;
+      const downBps = downMbps * 1_000_000;
+
+      const rateU = fmt(upBps), rateD = fmt(downBps);
+      const burstU = fmt(upBps * burstFactor), burstD = fmt(downBps * burstFactor);
+      const thU = fmt(upBps * thresholdPct), thD = fmt(downBps * thresholdPct);
+      const minU = fmt(upBps * minRatePct), minD = fmt(downBps * minRatePct);
+
+      const result = `${rateU}/${rateD} ${burstU}/${burstD} ${thU}/${thD} ${burstTime}/${burstTime} ${priority} ${minU}/${minD}`;
+      calcOut.value = result;
+
+      // otomatis isi input custom
+      $("rateUp").value = rateU;
+      $("rateDown").value = rateD;
+      $("burstUp").value = burstU;
+      $("burstDown").value = burstD;
+      $("burstTimeUp").value = burstTime;
+      $("burstTimeDown").value = burstTime;
+      $("priority").value = priority;
+      $("minUp").value = minU;
+      $("minDown").value = minD;
+    }
+
+    calcUp.addEventListener("change", updateCalc);
+    calcDown.addEventListener("change", updateCalc);
+
+    // nilai awal
+    calcUp.value = "6";
+    calcDown.value = "9";
+    updateCalc();
+  }
 });
+
 
 // =========================================================
 // 🔹 Edit Paket (PUT /profiles/:id)
