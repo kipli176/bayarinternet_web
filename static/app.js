@@ -156,31 +156,79 @@ $('logoutBtn').addEventListener('click', async () => {
 
 
 
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
+let deferredPrompt;window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
 
-  // Buat popup
+  // Jika popup sudah ada, jangan buat dua kali
+  if (document.getElementById('installPopup')) return;
+
+  // Buat overlay semi-transparan (opsional, klik di luar = tutup)
+  const overlay = document.createElement('div');
+  overlay.id = 'installOverlay';
+  overlay.className = 'fixed inset-0 bg-black/30 backdrop-blur-sm z-40 opacity-0 transition-opacity duration-300';
+  document.body.appendChild(overlay);
+
+  // Buat popup (bottom sheet style)
   const popup = document.createElement('div');
   popup.id = 'installPopup';
-  popup.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl shadow-lg px-4 py-3 z-50 flex items-center gap-3';
+  popup.className = `
+    fixed bottom-0 left-0 right-0 
+    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 
+    rounded-t-2xl shadow-2xl p-4 pb-6 z-50 
+    translate-y-full transition-transform duration-300
+  `;
   popup.innerHTML = `
-    <span>📱 <b>Instal BayarInter?</b></span>
-    <button id="btnInstallApp" class="bg-primary text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-700">Pasang</button>
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-base font-semibold">📱 Instal BayarInternet</h2>
+      <button id="btnCloseInstall" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 text-lg">&times;</button>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+      Pasang aplikasi ini agar bisa diakses lebih cepat.
+    </p>
+    <div class="flex justify-end gap-3">
+      <button id="btnLaterInstall" class="text-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Nanti saja
+      </button>
+      <button id="btnInstallApp" class="text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-teal-700">
+        Pasang Sekarang
+      </button>
+    </div>
   `;
   document.body.appendChild(popup);
 
+  // Sedikit animasi masuk
+  requestAnimationFrame(() => {
+    overlay.classList.add('opacity-100');
+    popup.classList.remove('translate-y-full');
+  if (navigator.vibrate) navigator.vibrate(20);
+  });
+
+  // Tutup popup fungsi
+  function closeInstallPopup() {
+    popup.classList.add('translate-y-full');
+    overlay.classList.remove('opacity-100');
+    setTimeout(() => {
+      popup.remove();
+      overlay.remove();
+    }, 300);
+  }
+
+  // Klik tombol Pasang
   $('btnInstallApp').addEventListener('click', async () => {
-    popup.remove();
+    closeInstallPopup();
     deferredPrompt.prompt();
     const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      toast('✅ Aplikasi terpasang');
-    }
+    if (result.outcome === 'accepted') toast('✅ Aplikasi terpasang');
     deferredPrompt = null;
   });
+
+  // Klik Nanti / Tutup / Overlay
+  $('btnLaterInstall').addEventListener('click', closeInstallPopup);
+  $('btnCloseInstall').addEventListener('click', closeInstallPopup);
+  overlay.addEventListener('click', closeInstallPopup);
 });
+
 
 window.addEventListener('appinstalled', () => {
   const popup = document.getElementById('installPopup');

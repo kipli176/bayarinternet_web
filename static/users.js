@@ -177,7 +177,7 @@ $("btnAddUser").addEventListener("click", async () => {
         <input id="passwordUser" type="password" placeholder="Kata sandi" class="w-full border p-2 rounded">
         <input id="fullNameUser" placeholder="Nama lengkap" class="w-full border p-2 rounded">
         <input id="phoneUser" placeholder="Nomor telepon" class="w-full border p-2 rounded">
-        <input id="emailUser" type="email" placeholder="Email" class="w-full border p-2 rounded">
+        <input id="emailUser" type="hidden" value="ayo@bayarinter.net" placeholder="Email" class="w-full border p-2 rounded">
         <textarea id="alamatUser" placeholder="Alamat pelanggan" class="w-full border p-2 rounded"></textarea>
         <label class="block text-gray-600">Pilih Paket Internet:</label>
         <select id="profileIdUser" class="w-full border p-2 rounded">${options}</select>
@@ -253,7 +253,7 @@ window.editUser = async i => {
       <div class="space-y-2 text-sm">
         <input id="fullNameUserEdit" value="${u.full_name}" class="w-full border p-2 rounded">
         <input id="phoneUserEdit" value="${u.phone}" class="w-full border p-2 rounded">
-        <input id="emailUserEdit" value="${u.email}" type="email" class="w-full border p-2 rounded">
+        <input id="emailUserEdit" value="${u.email}" type="hidden" class="w-full border p-2 rounded">
         <textarea id="alamatUserEdit" class="w-full border p-2 rounded">${u.alamat}</textarea>
         <label class="block text-gray-600">Pilih Paket:</label>
         <select id="profileIdUserEdit" class="w-full border p-2 rounded">${options}</select>
