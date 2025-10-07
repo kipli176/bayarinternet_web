@@ -230,8 +230,8 @@ $("btnAddProfile")?.addEventListener("click", () => {
   const calcOut = $("calcOut");
 
   if (calcUp && calcDown) {
-    // isi select 3–60 Mbps
-    for (let v = 3; v <= 60; v += 3) {
+    // isi select 1–30 Mbps
+    for (let v = 1; v <= 30; v++) {
       calcUp.appendChild(new Option(`${v} Mbps`, v));
       calcDown.appendChild(new Option(`${v} Mbps`, v));
     }
@@ -277,8 +277,8 @@ $("btnAddProfile")?.addEventListener("click", () => {
     calcDown.addEventListener("change", updateCalc);
 
     // nilai awal
-    calcUp.value = "6";
-    calcDown.value = "9";
+    calcUp.value = "5";
+    calcDown.value = "5";
     updateCalc();
   }
 });
