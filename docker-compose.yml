@@ -1,0 +1,14 @@
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bayarinternet_web
+    restart: always 
+    networks:
+      - cloudflared
+
+networks:
+  cloudflared:
+    external: true

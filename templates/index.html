@@ -1,0 +1,463 @@
+<!-- =========================================================
+  BayarInter Billing Reseller
+  Version: v1.1
+  Stage: Base SPA (Splash → Login/Register → Dashboard)
+  ========================================================= -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BayarInter Billing Reseller</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0d9488',
+            accent: '#134e4a',
+            surface: '#f0fdfa'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Service Worker -->
+  <script>
+  // if ('serviceWorker' in navigator) {
+  //   window.addEventListener('load', () => {
+  //     navigator.serviceWorker.register('/service-worker.js')
+  //       .then(reg => console.log('🛰️ Service Worker terdaftar (v1.2)', reg.scope))
+  //       .catch(err => console.error('❌ Gagal daftar Service Worker:', err));
+  //   });
+  // }
+  </script>
+
+
+  <meta name="theme-color" content="#0d9488">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/logo.png">
+
+  <!-- Animasi dasar -->
+  <style>
+    * { transition: background-color 0.3s ease, color 0.3s ease; }
+    #toast {
+      pointer-events: none; /* ← klik akan diteruskan ke elemen di bawahnya */
+    }
+    #splashSection {
+      animation: fadeIn 0.6s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(1.05); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .fade-out { opacity: 0; transform: scale(1.05); transition: all 0.6s ease; }
+
+    .hidden { display: none !important; }
+    .page-section {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: opacity .4s ease, transform .4s ease;
+    }
+    .page-section.active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .page-section.hidden {
+      display: none;
+    }
+    tr {
+      transition: background-color 0.4s ease, opacity 0.4s ease;
+    }
+
+    tr.fade-out {
+      opacity: 0.3;
+    }
+
+    tr.added {
+      background-color: #d1fae5; /* hijau muda */
+    }
+
+    tr.edited {
+      background-color: #fef9c3; /* kuning lembut */
+    }
+
+
+  </style>
+</head>
+
+<body class="bg-surface text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- SPLASH -->
+  <section id="splashSection" class="fixed inset-0 flex flex-col items-center justify-center bg-primary text-white z-50">
+    <img src="/static/logo.png" alt="Logo BayarInternet"
+     class="h-32 animate-pulse mb-4 drop-shadow-[0_0_6px_white]">
+
+    <h1 class="text-2xl font-bold tracking-wide">Billing Internet</h1>
+    <p class="text-sm opacity-80 mt-1">Memuat aplikasi...</p>
+  </section>
+
+  <!-- LOGIN / REGISTER -->
+  <section id="authSection" class="hidden flex-1 flex flex-col items-center justify-center px-6 space-y-6">
+
+    <!-- LOGIN BOX -->
+    <div id="loginBox" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+      <h2 class="text-xl font-semibold text-center text-primary">Masuk Reseller</h2>
+      <input id="loginEmail" type="email" placeholder="Email" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <input id="loginPassword" type="password" placeholder="Kata sandi" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <button id="btnLogin" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-teal-700">Masuk</button>
+
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+        Belum punya akun?
+        <button id="toggleRegister" class="text-primary font-medium hover:underline">Daftar</button>
+      </p>
+    </div>
+
+    <!-- REGISTER BOX -->
+    <div id="registerBox" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+      <h2 class="text-xl font-semibold text-center text-primary">Daftar Reseller</h2>
+      <input id="regNama" type="text" placeholder="Nama Reseller" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <input id="regEmail" type="email" placeholder="Email" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <input id="regPassword" type="password" placeholder="Kata sandi" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <button id="btnRegister" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-teal-700">Daftar</button>
+
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+        Sudah punya akun?
+        <button id="toggleLogin" class="text-primary font-medium hover:underline">Masuk</button>
+      </p>
+    </div>
+
+  </section>
+<!-- ===================================================== -->
+<!-- DASHBOARD (v1.6r4) -->
+<!-- ===================================================== -->
+<section id="dashboardSection" class="hidden flex-1 p-0 pb-20 space-y-6 overflow-y-auto">
+  <header class="bg-primary text-white px-5 pt-5 pb-6 rounded-b-3xl shadow-md sticky top-0 z-20">
+    <div class="flex items-center justify-between">
+      <!-- Kiri: Judul -->
+      <h1 class="text-lg font-bold tracking-tight">Dashboard Reseller</h1>
+
+      <!-- Kanan: Dark mode + Logout button -->
+      <div class="flex items-center gap-2">
+        <button id="darkModeToggle" class="text-xl hover:scale-110 transition-transform">🌙</button>
+        <button id="logoutBtn" class="bg-white text-primary px-3 py-1 rounded-lg text-sm hover:bg-gray-200">
+          Keluar
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="mt-3 flex justify-between items-center">
+      <div>
+        <p class="text-sm opacity-90">Pendapatan bulan ini</p>
+        <p id="monthlyIncomeHeader" class="text-xl font-semibold leading-tight">Rp 1.000.000</p>
+      </div>
+    </div> 
+    <p class="text-sm opacity-90 mt-2">Selamat datang kembali 👋</p>
+    </div>
+  </header>
+
+  <!-- CARD RESELLER INFO -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow mx-4 relative">
+  <div class="flex items-center gap-4">
+    <img id="resellerLogo" src="static/logo.png" alt="Logo Reseller" class="w-14 h-14 rounded-full border">
+    <div>
+      <h3 id="companyName" class="font-semibold text-primary text-base">PT Internet Cepat</h3>
+      <p id="companyAddress" class="text-sm text-gray-600 dark:text-gray-400">Jl. Merdeka No. 45, Bandung</p>
+    </div>
+  </div>
+  
+  <!-- Pindahkan button ke pojok kanan atas -->
+  <button id="editResellerBtn" title="Edit Profil" class="absolute top-2 right-2 text-gray-500 hover:text-primary text-xl active:scale-95 transition-transform duration-100">
+    ✏️
+  </button>
+</div>
+
+
+  <!-- CARD STATISTIK -->
+  <section class="grid grid-cols-2 sm:grid-cols-2 gap-4 px-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow text-center">
+      <p class="text-sm text-gray-500">Pelanggan</p>
+      <p id="totalUsers" class="text-xl font-semibold text-primary">0</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow text-center">
+      <p class="text-sm text-gray-500">Tagihan Aktif</p>
+      <p id="totalInvoices" class="text-xl font-semibold text-primary">0</p>
+    </div>
+  </section>
+
+  <!-- NAVIGASI MENU -->
+  <nav class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 p-4">
+
+    <button data-nav="profiles" class="menu-card bg-blue-500 text-white dark:bg-gray-800 rounded-2xl p-3 flex flex-col items-center justify-center hover:shadow-md active:scale-95 transition-transform duration-100">
+      <span class="text-5xl">📦</span>
+      <span class="mt-2 text-sm font-medium">Paket</span>
+    </button>
+
+    <button data-nav="users" class="menu-card bg-red-500 text-white dark:bg-gray-800 rounded-2xl p-3 flex flex-col items-center justify-center hover:shadow-md active:scale-95 transition-transform duration-100">
+      <span class="text-5xl">👥</span>
+      <span class="mt-2 text-sm font-medium">Pelanggan</span>
+    </button>
+
+    <button data-nav="invoices" class="menu-card bg-yellow-500 text-white dark:bg-gray-800 rounded-2xl p-3 flex flex-col items-center justify-center hover:shadow-md active:scale-95 transition-transform duration-100">
+      <span class="text-5xl">💸</span>
+      <span class="mt-2 text-sm font-medium">Tagihan</span>
+    </button>
+
+    <button data-nav="payments" class="menu-card bg-green-500 text-white dark:bg-gray-800 rounded-2xl p-3 flex flex-col items-center justify-center hover:shadow-md active:scale-95 transition-transform duration-100">
+      <span class="text-5xl">💳</span>
+      <span class="mt-2 text-sm font-medium">Pembayaran</span>
+    </button> 
+  </nav>
+</section>
+
+<!-- ===================================================== -->
+<!-- USERS SECTION -->
+<!-- ===================================================== -->
+<section id="usersSection" class="hidden page-section flex-1 pb-20 space-y-3 overflow-y-auto text-sm">
+  <div class="flex items-center justify-between bg-primary text-white px-5 py-4 rounded-b-xl shadow-md sticky top-0 z-20">
+    <button data-nav="dashboard" class="font-semibold">⬅️ Kembali</button>
+    <h2 class="font-semibold">👥 Daftar Pelanggan</h2>
+  </div>
+  <!-- Filter -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4">
+    <div class="flex gap-2 flex-wrap">
+      <select id="filterStatus" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+        <option value="all">Semua Status</option>
+        <option value="active">Aktif</option>
+        <option value="suspended">Suspend</option>
+      </select>
+
+      <select id="filterProfile" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary min-w-[150px]">
+        <option value="">Semua Paket</option>
+        <!-- Paket internet akan di-load dari API -->
+      </select>
+
+      <select id="filterPerPage" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+        <option value="10">10 / Halaman</option>
+        <option value="20" selected>20 / Halaman</option>
+        <option value="50">50 / Halaman</option>
+        <option value="100">100 / Halaman</option>
+      </select>
+    </div>
+
+    <div class="flex gap-2 flex-1 sm:flex-none">
+      <input id="searchUser" type="text" placeholder="Cari nama atau email..." class="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary" />
+      <button id="btnAddUser" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-teal-700">➕ Tambah</button>
+    </div>
+  </div>
+
+
+  <!-- Tabel -->
+  <div class="overflow-x-auto border rounded-lg sm:mr-4 sm:ml-4 mr-1 ml-1">
+    <table class="min-w-full text-xs border-collapse">
+      <thead class="bg-primary dark:primary text-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="p-2 text-left">Nama</th>
+          <th class="p-2 text-left">Email</th>
+          <th class="p-2 text-center">Status</th>
+          <th class="p-2 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="userTable" class="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+        <tr>
+          <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="flex justify-center items-center gap-3 py-3">
+      <button id="prevPage" class="bg-primary text-white px-3 py-1 rounded">⬅️</button>
+      <span id="userPageInfo" class="text-sm text-gray-600"></span>
+      <button id="nextPage" class="bg-primary text-white px-3 py-1 rounded">➡️</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- INVOICE SECTION (v1.5r3) -->
+<!-- ===================================================== -->
+<section id="invoicesSection" class="hidden page-section flex-1 pb-20 space-y-3 overflow-y-auto text-sm">
+  <!-- Header -->
+  <div class="flex items-center justify-between bg-primary text-white px-5 py-4 rounded-b-xl shadow-md sticky top-0 z-20">
+    <button data-nav="dashboard" class="font-semibold">⬅️ Kembali</button>
+    <h2 class="font-semibold">💸 Daftar Tagihan</h2>
+  </div>
+
+  <!-- Filter -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4">
+    <select id="filterInvoiceStatus" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <option value="all">Semua</option>
+      <option value="paid">Lunas</option>
+      <option value="unpaid">Belum</option>
+    </select>
+<input id="filterInvoicePeriod" type="month" class="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"/>
+    <input id="searchInvoice" type="text" placeholder="Cari nama pelanggan atau paket..." class="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary" />
+    <button id="btnTambahInvoice" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-teal-700">➕ Tambah</button>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto border rounded-lg sm:mr-4 sm:ml-4 mr-1 ml-1">
+    <table class="min-w-full text-xs border-collapse">
+      <thead class="bg-primary dark:primary text-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="p-2 text-left">Nama</th>
+          <th class="p-2 text-left">Paket</th>
+          <th class="p-2 text-right">Total</th>
+          <th class="p-2 text-center">Status</th>
+          <th class="p-2 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="invoiceTable" class="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+        <tr>
+          <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+
+<div class="flex justify-center items-center gap-3 py-3">
+  <button id="prevInvoicePage" class="bg-primary text-white px-3 py-1 rounded">⬅️</button>
+  <span id="invoicePageInfo" class="text-sm text-gray-600"></span>
+  <button id="nextInvoicePage" class="bg-primary text-white px-3 py-1 rounded">➡️</button>
+</div>
+  </div>
+
+</section>
+
+<!-- ===================================================== -->
+<!-- PROFILES SECTION (v1.6 - konsisten dengan USERS) -->
+<!-- ===================================================== -->
+<section id="profilesSection" class="hidden page-section flex-1 pb-20 space-y-3 overflow-y-auto text-sm">
+  <!-- Header -->
+  <div class="flex items-center justify-between bg-primary text-white px-5 py-4 rounded-b-xl shadow-md sticky top-0 z-20">
+    <button data-nav="dashboard" class="font-semibold">⬅️ Kembali</button>
+    <h2 class="font-semibold">📦 Daftar Paket</h2>
+  </div>
+
+  <!-- Filter -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4">
+  <div class="flex gap-2 flex-wrap">
+    <select id="filterProfilePerPage" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+      <option value="10">10 / halaman</option>
+      <option value="20">20 / halaman</option>
+      <option value="50">50 / halaman</option>
+    </select>
+  </div>
+
+  <div class="flex gap-2 flex-1 sm:flex-none">
+    <input id="searchProfile" type="text" placeholder="Cari nama paket..." class="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+    <button id="btnAddProfile" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-teal-700">➕ Tambah</button>
+  </div>
+</div>
+
+  <!-- Tabel Paket -->
+  <div class="overflow-x-auto border rounded-lg sm:mr-4 sm:ml-4 mr-1 ml-1">
+    <table class="min-w-full text-xs border-collapse">
+      <thead class="bg-primary dark:primary text-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="p-2 text-left">Nama Paket</th>
+          <th class="p-2 text-left">Tipe</th>
+          <th class="p-2 text-right">Harga</th>
+          <th class="p-2 text-center">Status</th>
+          <th class="p-2 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="profileTable" class="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+        <tr>
+          <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+    
+<div class="flex justify-center items-center gap-3 py-3">
+  <button id="prevProfilePage" class="bg-primary text-white px-3 py-1 rounded">⬅️</button>
+  <span id="profilePageInfo" class="text-sm text-gray-600"></span>
+  <button id="nextProfilePage" class="bg-primary text-white px-3 py-1 rounded">➡️</button>
+</div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- PAYMENT SECTION (v1.6r1) -->
+<!-- ===================================================== -->
+<section id="paymentsSection" class="hidden page-section flex-1 pb-20 space-y-3 overflow-y-auto text-sm active">
+  <div class="flex items-center justify-between bg-primary text-white px-5 py-4 rounded-b-xl shadow-md sticky top-0 z-20">
+    <button data-nav="dashboard" class="font-semibold">⬅️ Kembali</button>
+    <h2 class="font-semibold">💳 Daftar Pembayaran</h2>
+  </div>
+
+  <!-- Filter & Search -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4"> 
+      <select id="filterPayment" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
+        <option value="all">Semua</option>
+        <option value="success">Berhasil</option>
+        <option value="failed">Gagal</option>
+      </select>     
+
+      <select id="filterPaymentMethod" class="border p-2 rounded text-sm">
+        <option value="">Semua Metode</option>
+        <option value="manual">Manual</option>
+        <option value="bank_transfer">Bank Transfer</option>
+        <option value="qris">QRIS</option>
+      </select>
+      <input id="searchPayment" placeholder="Cari ID Invoice / metode" class="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary"> 
+      <button id="btnAddPayment" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-teal-700">
+        ➕ Tambah
+      </button>
+  </div>
+
+  <!-- Tabel -->
+  <div class="overflow-x-auto border rounded-lg sm:mr-4 sm:ml-4 mr-1 ml-1">
+    <table class="min-w-full text-xs border-collapse">
+      <thead class="bg-primary dark:primary text-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+        <tr>
+          <th class="p-2 text-left">Nama</th>
+          <th class="p-2 text-left">Metode</th>
+          <th class="p-2 text-right">Jumlah</th>
+          <th class="p-2 text-center">Status</th>
+          <th class="p-2 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="paymentTable" class="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+        <tr>
+          <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table> 
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- UNIVERSAL MODAL -->
+<!-- ===================================================== -->
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-lg w-11/12 max-w-sm p-5">
+    <h3 id="modalTitle" class="text-lg font-semibold mb-3 text-primary"></h3>
+    <div id="modalBody"></div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button id="modalCancel" class="px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">Batal</button>
+      <button id="modalSave" class="px-4 py-2 rounded-lg bg-primary text-white hover:bg-teal-700">Simpan</button>
+    </div>
+  </div>
+</div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm opacity-0 transition duration-300 z-50">Info</div>
+  <div id="netStatus" class="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg text-sm shadow-lg opacity-0 transition duration-300 z-50">Offline</div>
+
+  <!-- SCRIPT -->
+  <script src="/static/api.js"></script>
+  <script src="/static/app.js"></script>
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/profiles.js"></script>
+  <script src="/static/users.js"></script>
+  <script src="/static/invoices.js"></script>
+  <script src="/static/payments.js"></script>
+</body>
+</html>

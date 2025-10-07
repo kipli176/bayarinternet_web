@@ -1,0 +1,22 @@
+{
+  "name": "BayarInter Billing Reseller",
+  "short_name": "BayarInter",
+  "description": "Aplikasi billing ISP untuk reseller dengan mode offline-first.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
