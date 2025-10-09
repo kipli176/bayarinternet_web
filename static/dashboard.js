@@ -157,7 +157,7 @@ window.viewResellerInvoiceDetail = async i => {
       title: `Detail Invoice Reseller`,
       body: `
         <div class="text-sm space-y-2">
-          <p><b>Periode:</b> ${d.period_start} → ${d.period_end}</p>
+          <p><b>Periode:</b> ${formatDate(inv.period_start)} → ${formatDate(inv.period_end)}</p>
           <p><b>Jumlah Pelanggan:</b> ${d.users_count}</p>
           <p><b>Harga/User:</b> Rp ${(d.unit_price || 0).toLocaleString("id-ID")}</p>
           <p><b>Subtotal:</b> Rp ${(d.subtotal || 0).toLocaleString("id-ID")}</p>
@@ -217,16 +217,15 @@ window.printResellerInvoice = async i => {
         </head>
         <body onload="window.print(); setTimeout(()=>window.close(), 500)">
           <div class="center">
-            ${reseller.logo ? `<img src="${reseller.logo}" width="60" height="60"><br>` : ""}
-            <h3>${reseller.company_name || "BayarInter"}</h3>
-            <small>${reseller.alamat || reseller.address || ""}</small><br>
-            <small>Telp: ${reseller.phone || "-"}</small>
+            <img src="/static/icons/icon-72x72.png" width="60" height="60"><br>
+            <h3>Billing Internet</h3> 
+            <small>Telp: +62 856 260 77</small>
           </div>
 
           <div class="line"></div>
           <h4 class="center bold">INVOICE RESELLER</h4>
           <p><b>ID Invoice:</b> ${d.id.slice(0, 8)}</p>
-          <p><b>Periode:</b> ${d.period_start} s/d ${d.period_end}</p>
+          <p><b>Periode:</b> ${formatDate(d.period_start)} s/d ${formatDate(d.period_end)}</p>
 
           <div class="line"></div>
           <p><b>Jumlah Pelanggan:</b> ${d.users_count}</p>
