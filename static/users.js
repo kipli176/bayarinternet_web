@@ -97,17 +97,30 @@ function renderUsers() {
 
   tbody.innerHTML = users.length
     ? users
-        .map(
-          (u, i) => `
+        .map((u, i) => {
+          const paket =
+            profiles.find(p => p.id === u.profile_id)?.name ||
+            "(Tidak diketahui)";
+
+          return `
       <tr class="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
         <td class="p-2">${u.full_name}</td>
-        <td class="p-2">${u.email}</td>
+        <td class="p-2">${paket}</td>
         <td class="p-2 text-center">
           <span class="px-2 py-1 rounded-full text-xs ${
             u.status === "active"
               ? "bg-green-100 text-green-700"
               : "bg-red-100 text-red-700"
           }">${u.status}</span>
+        </td>
+        <td class="p-2 text-center">
+          <span class="px-2 py-1 rounded-full text-xs ${
+            (u.is_online === true || u.is_online === "true")
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }">
+            ${(u.is_online === true || u.is_online === "true") ? "🟢" : "🔴"}
+          </span>
         </td>
         <td class="p-2 text-center flex items-center justify-center gap-2">
           <button title="Detail" class="text-primary" onclick="viewUserDetail(${i})">🧾</button>
@@ -116,8 +129,8 @@ function renderUsers() {
           <button title="Hapus" class="text-red-600" onclick="deleteUser(${i})">🗑️</button>
         </td>
       </tr>
-    `
-        )
+      `;
+        })
         .join("")
     : `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada pelanggan</td></tr>`;
 
@@ -133,6 +146,7 @@ function renderUsers() {
     userPagination.page >= Math.ceil(userPagination.total / userPagination.per_page)
   );
 }
+
 
 // =========================================================
 // 🔹 Filter dan pencarian langsung ke API
