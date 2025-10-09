@@ -4,6 +4,31 @@
    Stage: Base SPA with working register toggle
    ========================================================= */
 
+window.addEventListener("load", () => {
+  // Ganti history sekarang supaya posisi awal "terkunci"
+  history.replaceState(null, "", location.href);
+
+  // Tambahkan satu dummy state ke depan
+  history.pushState(null, "", location.href);
+
+  // Dengarkan event popstate
+  window.addEventListener("popstate", (event) => {
+    // Dorong kembali dummy state agar tidak mundur
+    history.pushState(null, "", location.href);
+
+    // Tangani kondisi SPA kamu di sini
+    const modal = document.getElementById('modal');
+    if (modal && !modal.classList.contains('hidden')) {
+      closeModal();
+    } else {
+      const backButton = document.querySelector('[data-nav="dashboard"]');
+      if (backButton) backButton.click();
+    }
+  });
+});
+
+
+
 const $ = id => document.getElementById(id);
 const show = el => { if (el) el.classList.remove('hidden'); };
 const hide = el => { if (el) el.classList.add('hidden'); };
@@ -1160,21 +1185,3 @@ document.querySelectorAll('[data-nav]').forEach(btn => {
   });
 });
 
-// Tambahkan state dummy saat load
-window.addEventListener("load", () => {
-  history.pushState(null, null, location.href);
-});
-
-// Tangkap tombol back
-window.addEventListener("popstate", (event) => {
-  const modal = $('modal');
-
-  // Jika modal sedang terbuka, tutup dulu
-  if (modal && !modal.classList.contains('hidden')) {
-    closeModal();
-  } else {
-    // Kalau tidak ada modal terbuka, jalankan navigasi SPA normal (opsional)
-    const backButton = document.querySelector('[data-nav="dashboard"]');
-    if (backButton) backButton.click();
-  }
-});
