@@ -88,6 +88,14 @@
       background-color: #fef9c3; /* kuning lembut */
     }
 
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.blink {
+  animation: blink 1s infinite;
+}
 
   </style>
 </head>
@@ -343,14 +351,14 @@
   </div>
   <!-- Filter -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4">
-    <div class="flex gap-2 flex-wrap">
+    <div class="flex gap-1 flex-wrap">
       <select id="filterStatus" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
         <option value="all">Semua Status</option>
         <option value="active">Aktif</option>
         <option value="suspended">Suspend</option>
       </select>
 
-      <select id="filterProfile" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary min-w-[150px]">
+      <select id="filterProfile" class="border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary">
         <option value="">Semua Paket</option>
         <!-- Paket internet akan di-load dari API -->
       </select>

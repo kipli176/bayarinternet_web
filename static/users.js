@@ -114,14 +114,15 @@ function renderUsers() {
           }">${u.status}</span>
         </td>
         <td class="p-2 text-center">
-          <span class="px-2 py-1 rounded-full text-xs ${
-            (u.is_online === true || u.is_online === "true")
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }">
-            ${(u.is_online === true || u.is_online === "true") ? "🟢" : "🔴"}
-          </span>
+            <span class="px-2 py-1 rounded-full text-xs blink ${
+                (u.is_online === true || u.is_online === "true")
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }">
+                ${(u.is_online === true || u.is_online === "true") ? "🟢" : "🔴"}
+            </span>
         </td>
+
         <td class="p-2 text-center flex items-center justify-center gap-2">
           <button title="Detail" class="text-primary" onclick="viewUserDetail(${i})">🧾</button>
           <button title="Edit" class="text-blue-600" onclick="editUser(${i})">✏️</button>
