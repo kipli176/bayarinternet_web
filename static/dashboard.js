@@ -104,26 +104,26 @@ async function renderResellerInvoicesTable() {
     section.classList.remove("hidden");
     nav.classList.add("hidden");
 
-    tableBody.innerHTML = invoices.map(inv => `
-      <tr>
+    tableBody.innerHTML = invoices.map((inv, i) => `
+    <tr>
         <td class="p-2 text-left">
-          ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}
+        ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}
         </td>
         <td class="p-2 text-center">${inv.users_count}</td>
         <td class="p-2 text-right">Rp ${Number(inv.total).toLocaleString("id-ID")}</td>
         <td class="p-2 text-center">
-          <span class="px-2 py-1 rounded text-xs ${
+        <span class="px-2 py-1 rounded text-xs ${
             inv.status === "paid"
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700"
-          }">${inv.status}</span>
+            ? "bg-green-100 text-green-700"
+            : "bg-yellow-100 text-yellow-700"
+        }">${inv.status}</span>
         </td>
         <td class="p-2 text-center">
-          <button class="text-blue-500 hover:underline text-xs"
-            onclick="openInvoiceDetail('${inv.id}')">Detail</button>
+          <button title="Detail" class="text-primary" onclick="viewResellerInvoiceDetail(${i})">🧾</button> 
+          <button title="Print" class="text-indigo-600" onclick="printResellerInvoice(${i})">🖨️</button> 
         </td>
-      </tr>
-    `).join("");
+    </tr>
+    `).join(""); 
   } catch (err) {
     console.error("Gagal ambil reseller invoices:", err);
     tableBody.innerHTML = `
@@ -141,31 +141,131 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
 }
 
-// Aksi tombol detail (opsional bisa buka modal / print)
-async function openInvoiceDetail(invoiceId) {
-  try {
-    const inv = await Api.get(`/reseller-invoices/${invoiceId}`);
-    openModal({
-      title: "Detail Invoice Reseller",
-      body: `
-        <div class="text-sm space-y-1">
-          <p><b>Periode:</b> ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}</p>
-          <p><b>Jumlah Pelanggan:</b> ${inv.users_count}</p>
-          <p><b>Total:</b> Rp ${Number(inv.total).toLocaleString("id-ID")}</p>
-          <p><b>Status:</b> ${inv.status}</p>
-        </div>
-      `,
-      footer: `<button class="btn btn-primary" onclick="printInvoice('${invoiceId}')">🧾 Cetak</button>`
-    });
-  } catch (err) {
-    toast("❌ Gagal ambil detail invoice");
-  }
-}
+// =========================================================
+// 🔹 Detail Invoice Reseller (GET /reseller-invoices/:id)
+// =========================================================
+window.viewResellerInvoiceDetail = async i => {
+  const inv = window.resellerInvoices?.[i];
+  if (!inv) return toast("❗ Data tidak ditemukan");
 
-// Cetak (opsional)
-function printInvoice(invoiceId) {
-  window.open(`/reseller-invoices/${invoiceId}/print`, "_blank");
-}
+  try {
+    const d = await Api.get(`/reseller-invoices/${inv.id}`);
+    const m = d.meta || {};
+
+    openModal({
+      title: `Detail Invoice Reseller`,
+      body: `
+        <div class="text-sm space-y-2">
+          <p><b>Periode:</b> ${d.period_start} → ${d.period_end}</p>
+          <p><b>Jumlah Pelanggan:</b> ${d.users_count}</p>
+          <p><b>Harga/User:</b> Rp ${(d.unit_price || 0).toLocaleString("id-ID")}</p>
+          <p><b>Subtotal:</b> Rp ${(d.subtotal || 0).toLocaleString("id-ID")}</p>
+          <p><b>Diskon:</b> Rp ${(d.discount || 0).toLocaleString("id-ID")}</p>
+          <p><b>Pajak:</b> Rp ${(d.tax || 0).toLocaleString("id-ID")}</p>
+          <p><b>Total:</b> Rp ${(d.total || 0).toLocaleString("id-ID")}</p>
+          <p><b>Status:</b> ${d.status}</p>
+          ${
+            d.meta?.paid_at
+              ? `<p><b>Dibayar:</b> ${new Date(d.meta.paid_at).toLocaleString("id-ID")}</p>`
+              : ""
+          }
+          <p><b>Dibuat:</b> ${new Date(d.created_at).toLocaleString("id-ID")}</p>
+        </div>`,
+      onSave: () => closeModal(),
+    });
+
+    $("modalSave").textContent = "Tutup";
+  } catch (err) {
+    console.error("Gagal ambil detail invoice reseller:", err);
+    toast("⚠️ Gagal memuat detail invoice reseller");
+  }
+};
+
+
+// =========================================================
+// 🔹 Print Invoice Reseller (GET /reseller-invoices/:id/print)
+// =========================================================
+window.printResellerInvoice = async i => {
+  const inv = window.resellerInvoices?.[i];
+  if (!inv) return toast("❗ Data tidak ditemukan");
+
+  try {
+    const res = await Api.get(`/reseller-invoices/${inv.id}/print`);
+    const d = res.invoice;
+    const m = d.meta || {};
+    const reseller = JSON.parse(localStorage.getItem("resellerProfile") || "{}");
+
+    const html = `
+      <html>
+        <head>
+          <title>Nota Invoice Reseller</title>
+          <style>
+            body {
+              font-family: monospace;
+              font-size: 13px;
+              width: 280px;
+              margin: 0 auto;
+              line-height: 1.4;
+            }
+            h2, h3, p, div { margin: 0; padding: 0; }
+            .center { text-align: center; }
+            .line { border-top: 1px dashed #000; margin: 6px 0; }
+            .bold { font-weight: bold; }
+            .space { margin-top: 6px; }
+          </style>
+        </head>
+        <body onload="window.print(); setTimeout(()=>window.close(), 500)">
+          <div class="center">
+            ${reseller.logo ? `<img src="${reseller.logo}" width="60" height="60"><br>` : ""}
+            <h3>${reseller.company_name || "BayarInter"}</h3>
+            <small>${reseller.alamat || reseller.address || ""}</small><br>
+            <small>Telp: ${reseller.phone || "-"}</small>
+          </div>
+
+          <div class="line"></div>
+          <h4 class="center bold">INVOICE RESELLER</h4>
+          <p><b>ID Invoice:</b> ${d.id.slice(0, 8)}</p>
+          <p><b>Periode:</b> ${d.period_start} s/d ${d.period_end}</p>
+
+          <div class="line"></div>
+          <p><b>Jumlah Pelanggan:</b> ${d.users_count}</p>
+          <p><b>Harga/User:</b> Rp ${(d.unit_price || 0).toLocaleString("id-ID")}</p>
+          <p><b>Subtotal:</b> Rp ${(d.subtotal || 0).toLocaleString("id-ID")}</p>
+          <p><b>Diskon:</b> Rp ${(d.discount || 0).toLocaleString("id-ID")}</p>
+          <p><b>Pajak:</b> Rp ${(d.tax || 0).toLocaleString("id-ID")}</p>
+          <p><b>Total Bayar:</b> Rp ${(d.total || 0).toLocaleString("id-ID")}</p>
+
+          <div class="line"></div>
+          <p><b>Status:</b> ${d.status === "paid" ? "LUNAS" : "BELUM BAYAR"}</p>
+          ${
+            d.meta?.paid_at
+              ? `<p><b>Dibayar:</b> ${new Date(d.meta.paid_at).toLocaleString("id-ID")}</p>`
+              : ""
+          }
+
+          <div class="line"></div>
+          <p class="center bold">
+            ${d.status === "paid" ? "*** LUNAS ***" : "*** BELUM DIBAYAR ***"}
+          </p>
+          <div class="line"></div>
+
+          <div class="center space">
+            <small>Terima kasih telah menjadi mitra kami.</small><br>
+            <small>${res.note || ""}</small><br>
+            <small>${new Date().toLocaleString("id-ID")}</small>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  } catch (err) {
+    console.error("Gagal print invoice reseller:", err);
+    toast("⚠️ Gagal mencetak invoice reseller");
+  }
+};
 
 // =========================================================
 // Ambil Data dari API
