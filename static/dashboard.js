@@ -8,7 +8,7 @@
 var resellerProfile = {
   company_name: "Memuat...",
   alamat: "-",
-  logo: "static/logo.png"
+  logo: "static/icons/icon-512x512.png"
 };
 
 let dashboardCache = {
@@ -22,7 +22,7 @@ let dashboardCache = {
 function renderResellerInfo(reseller = resellerProfile) {
   $("companyName").textContent = reseller.company_name || reseller.name || "-";
   $("companyAddress").textContent = reseller.alamat || reseller.address || "-";
-  $("resellerLogo").src = reseller.logo || "static/logo.png";
+  $("resellerLogo").src = reseller.logo || "static/icons/icon-512x512.png";
 }
 
 // =========================================================
