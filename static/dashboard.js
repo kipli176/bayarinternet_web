@@ -68,6 +68,104 @@ async function updateMonthlyIncome() {
   $("monthlyIncomeHeader").textContent = `Rp ${total.toLocaleString("id-ID")}`;
 }
 
+// =========================================================
+// Tampilkan Tabel Invoice Reseller (dari /reseller-invoices/me)
+// =========================================================
+async function renderResellerInvoicesTable() {
+  const tableBody = $("resellerInvoiceTable");
+  const section = $("resellerInvoiceSection");
+  const nav = document.querySelector("nav");
+
+  // Set tampilan awal
+  tableBody.innerHTML = `
+    <tr>
+      <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">
+        Memuat data...
+      </td>
+    </tr>`;
+
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    // Ambil data invoice reseller bulan ini
+    const res = await Api.get(`/reseller-invoices/me?year=${year}&month=${month}`);
+    const invoices = res?.data || [];
+
+    if (!invoices.length) {
+      // ❌ Tidak ada invoice — sembunyikan tabel, tampilkan navigasi
+      section.classList.add("hidden");
+      nav.classList.remove("hidden");
+      return;
+    }
+
+    // ✅ Ada invoice — tampilkan tabel, sembunyikan navigasi
+    section.classList.remove("hidden");
+    nav.classList.add("hidden");
+
+    tableBody.innerHTML = invoices.map(inv => `
+      <tr>
+        <td class="p-2 text-left">
+          ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}
+        </td>
+        <td class="p-2 text-center">${inv.users_count}</td>
+        <td class="p-2 text-right">Rp ${Number(inv.total).toLocaleString("id-ID")}</td>
+        <td class="p-2 text-center">
+          <span class="px-2 py-1 rounded text-xs ${
+            inv.status === "paid"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }">${inv.status}</span>
+        </td>
+        <td class="p-2 text-center">
+          <button class="text-blue-500 hover:underline text-xs"
+            onclick="openInvoiceDetail('${inv.id}')">Detail</button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    console.error("Gagal ambil reseller invoices:", err);
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">
+          Gagal memuat data
+        </td>
+      </tr>`;
+  }
+}
+
+// Helper tanggal pendek
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+}
+
+// Aksi tombol detail (opsional bisa buka modal / print)
+async function openInvoiceDetail(invoiceId) {
+  try {
+    const inv = await Api.get(`/reseller-invoices/${invoiceId}`);
+    openModal({
+      title: "Detail Invoice Reseller",
+      body: `
+        <div class="text-sm space-y-1">
+          <p><b>Periode:</b> ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}</p>
+          <p><b>Jumlah Pelanggan:</b> ${inv.users_count}</p>
+          <p><b>Total:</b> Rp ${Number(inv.total).toLocaleString("id-ID")}</p>
+          <p><b>Status:</b> ${inv.status}</p>
+        </div>
+      `,
+      footer: `<button class="btn btn-primary" onclick="printInvoice('${invoiceId}')">🧾 Cetak</button>`
+    });
+  } catch (err) {
+    toast("❌ Gagal ambil detail invoice");
+  }
+}
+
+// Cetak (opsional)
+function printInvoice(invoiceId) {
+  window.open(`/reseller-invoices/${invoiceId}/print`, "_blank");
+}
 
 // =========================================================
 // Ambil Data dari API
@@ -143,6 +241,7 @@ async function refreshDashboard() {
     renderResellerInfo(reseller);
     updateDashboardStats(users, invoices);
     updateMonthlyIncome(invoices);
+    await renderResellerInvoicesTable();
 
     // toast("✅ Dashboard diperbarui");
   } catch (err) {
