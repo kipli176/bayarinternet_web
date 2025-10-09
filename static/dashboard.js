@@ -15,7 +15,7 @@ let dashboardCache = {
   users: [],
   invoices: []
 };
-
+window.resellerInvoices = [];
 // =========================================================
 // Render Info Reseller ke UI
 // =========================================================
@@ -92,6 +92,7 @@ async function renderResellerInvoicesTable() {
     // Ambil data invoice reseller bulan ini
     const res = await Api.get(`/reseller-invoices/me?year=${year}&month=${month}`);
     const invoices = res?.data || [];
+    window.resellerInvoices = invoices;
 
     if (!invoices.length) {
       // ❌ Tidak ada invoice — sembunyikan tabel, tampilkan navigasi
