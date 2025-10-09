@@ -307,8 +307,12 @@ function openModal({ title, body, onSave }) {
   $('modalSave').onclick = onSave;
   $('modalCancel').onclick = () => hide($('modal'));
   show($('modal'));
+  history.pushState({ modalOpen: true }, "");
 }
-function closeModal() { hide($('modal')); }
+function closeModal() { 
+  hide($('modal')); 
+  history.pushState(null, "", location.href);
+}
 
 // // =========================================================
 // // CRUD Pelanggan (local dummy)
@@ -1154,4 +1158,23 @@ document.querySelectorAll('[data-nav]').forEach(btn => {
     if (target === 'profiles') renderProfiles();
     if (target === 'payments') renderPayments();
   });
+});
+
+// Tambahkan state dummy saat load
+window.addEventListener("load", () => {
+  history.pushState(null, null, location.href);
+});
+
+// Tangkap tombol back
+window.addEventListener("popstate", (event) => {
+  const modal = $('modal');
+
+  // Jika modal sedang terbuka, tutup dulu
+  if (modal && !modal.classList.contains('hidden')) {
+    closeModal();
+  } else {
+    // Kalau tidak ada modal terbuka, jalankan navigasi SPA normal (opsional)
+    const backButton = document.querySelector('[data-nav="dashboard"]');
+    if (backButton) backButton.click();
+  }
 });
