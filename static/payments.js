@@ -2,12 +2,7 @@
    PAYMENTS SECTION (v2.2)
    API Integrated + Offline Cache + Modal Support
    ========================================================= */
-
-/* =========================================================
-   PAYMENTS SECTION (v2.2)
-   API Integrated + Offline Cache + Dynamic Filter/Search
-   ========================================================= */
-
+ 
 let payments = [];
 let paymentFilter = { status: "", method: "", search: "" };
 
@@ -27,8 +22,9 @@ async function loadPayments() {
   `;
 
   try {
+    showLoading("Tunggu sebentar...");
     const res = await Api.get(`/payments?${params.toString()}`);
-
+    hideLoading();
     // ✅ Pastikan hasilnya benar-benar array data
     if (Array.isArray(res)) {
       payments = res;
@@ -42,6 +38,7 @@ async function loadPayments() {
 
     localStorage.setItem("cached_payments", JSON.stringify(payments));
   } catch (err) {
+    hideLoading();
     console.warn("⚠️ Offline mode: pakai cache payments");
     const cache = localStorage.getItem("cached_payments");
     if (cache) payments = JSON.parse(cache);
@@ -80,8 +77,8 @@ function renderPayments() {
         }">${p.status}</span>
       </td>
       <td class="p-2 text-center flex items-center justify-center gap-2">
-        <button class="text-primary" title="Detail" onclick="viewPaymentDetail(${i})">🧾</button>
-        <button class="text-indigo-600" title="Print" onclick="printPayment(${i})">🖨️</button>
+        <button class="text-primary text-lg" title="Detail" onclick="viewPaymentDetail(${i})">🧾</button>
+        <button class="text-indigo-600 text-lg" title="Print" onclick="printPayment(${i})">🖨️</button>
       </td>
     </tr>`
     )
@@ -146,12 +143,15 @@ $("btnAddPayment")?.addEventListener("click", () => {
       };
 
       try {
+        showLoading("Tunggu sebentar...");
         const res = await Api.post("/payments", data);
+        hideLoading();
         toast("✅ Pembayaran berhasil ditambahkan");
         closeModal();
         payments.unshift(res?.data || data);
         renderPayments();
       } catch (err) {
+        hideLoading();
         toast("⚠️ Offline: data pembayaran disimpan lokal");
         addPendingPaymentOp("add", data);
         closeModal();
@@ -172,7 +172,9 @@ $("btnAddPayment")?.addEventListener("click", () => {
     }
 
     try {
+        showLoading("Tunggu sebentar...");
       const res = await Api.get(`/invoices?status=unpaid&search=${encodeURIComponent(q)}`);
+      hideLoading();
       const list = res?.data || [];
       listEl.innerHTML = list
         .map(
@@ -193,6 +195,7 @@ $("btnAddPayment")?.addEventListener("click", () => {
         })
       );
     } catch {
+        hideLoading();
       listEl.innerHTML = `<li class="p-2 text-gray-500">Tidak ada hasil</li>`;
       listEl.classList.remove("hidden");
     }
@@ -243,7 +246,9 @@ window.printPayment = async i => {
   if (!p) return toast("❗ Pembayaran tidak ditemukan");
 
   try {
+    showLoading("Tunggu sebentar...");
     const d = await Api.get(`/invoices/${p.invoice_id}/print`);
+    hideLoading();
     const inv = d.invoice;
     const meta = inv.meta || {};
 
@@ -307,6 +312,7 @@ window.printPayment = async i => {
     w.document.write(html);
     w.document.close();
   } catch {
+    hideLoading();
     toast("⚠️ Gagal memuat data nota pembayaran");
   }
 };
@@ -326,8 +332,12 @@ async function syncPendingPayments() {
   if (!q.length) return;
   for (const op of q) {
     try {
+        showLoading("Tunggu sebentar...");
       if (op.type === "add") await Api.post("/payments", op.payload);
+      hideLoading();
+      toast("✅ Data pembayaran offline berhasil disinkronisasi");
     } catch (err) {
+        hideLoading();
       console.warn("Gagal sync op:", op, err);
     }
   }

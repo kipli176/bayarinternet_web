@@ -29,8 +29,8 @@ async function loadInvoices(page = 1) {
     </td></tr>
   `;
 
-  try {
-    const res = await Api.get(`/invoices?${params.toString()}`);
+  try { 
+    const res = await Api.get(`/invoices?${params.toString()}`); 
     invoices = res?.data || [];
     invoicePagination = {
       page: res.page || 1,
@@ -38,7 +38,7 @@ async function loadInvoices(page = 1) {
       total: res.total || invoices.length,
     };
     localStorage.setItem("cached_invoices", JSON.stringify({ invoices, invoicePagination }));
-  } catch (err) {
+  } catch (err) { 
     console.warn("⚠️ Offline mode: pakai cache invoices");
     const cache = localStorage.getItem("cached_invoices");
     if (cache) {
@@ -82,8 +82,8 @@ function renderInvoices() {
               ? `<button title="Tandai Lunas" class="text-green-600" onclick="toggleInvoiceStatus(${i})">💰</button>`
               : ""
           }
-          <button title="Print" class="text-indigo-600" onclick="printInvoice(${i})">🖨️</button>
-          <button title="Hapus" class="text-red-600" onclick="deleteInvoice(${i})">🗑️</button>
+          <button title="Print" class="text-indigo-600 text-lg" onclick="printInvoice(${i})">🖨️</button>
+          <button title="Hapus" class="text-red-600 text-lg" onclick="deleteInvoice(${i})">🗑️</button>
         </td>
       </tr>`
           )
@@ -150,11 +150,14 @@ $("btnTambahInvoice")?.addEventListener("click", () => {
       if (!user_id) return toast("❗ Pilih pelanggan terlebih dahulu");
 
       try {
+        showLoading("Memuat detail...");
         await Api.post("/invoices", { user_id, months });
+        hideLoading();
         toast("✅ Tagihan berhasil dibuat");
         closeModal();
         await loadInvoices();
       } catch (err) {
+        hideLoading();
         toast("⚠️ Gagal membuat tagihan");
       }
     },
@@ -205,8 +208,10 @@ window.viewInvoiceDetail = async i => {
   if (!inv) return toast("❗ Data tidak ditemukan");
 
   try {
+    showLoading("Memuat detail...");
     const d = await Api.get(`/invoices/${inv.id}`);
     const m = d.meta || {};
+    hideLoading();
     openModal({
       title: `Detail Tagihan`,
       body: `
@@ -222,6 +227,7 @@ window.viewInvoiceDetail = async i => {
     });
     $("modalSave").textContent = "Tutup";
   } catch {
+    hideLoading();
     toast("⚠️ Gagal memuat detail tagihan");
   }
 };
@@ -233,11 +239,14 @@ window.toggleInvoiceStatus = async i => {
   const inv = invoices[i];
   if (!inv) return;
   try {
+    showLoading("Memuat detail...");
     await Api.put(`/invoices/${inv.id}/pay`);
+    hideLoading();
     toast("💰 Tagihan ditandai lunas");
     await loadInvoices(invoicePagination.page);
   } catch {
     toast("⚠️ Gagal memperbarui status");
+    hideLoading();
   }
 };
 
@@ -248,12 +257,15 @@ window.deleteInvoice = async i => {
   const inv = invoices[i];
   if (!confirm(`Hapus tagihan ${inv.meta?.full_name}?`)) return;
   try {
+    showLoading("Memuat detail...");
     await Api.del(`/invoices/${inv.id}`);
+    hideLoading();
     toast("🗑️ Tagihan dihapus");
     invoices.splice(i, 1);
     renderInvoices();
     setTimeout(() => loadInvoices(invoicePagination.page), 1000);
   } catch {
+    hideLoading();
     toast("⚠️ Gagal menghapus tagihan");
   }
 };
@@ -267,7 +279,9 @@ window.printInvoice = async i => {
 
   try {
     // Ambil data invoice
+    showLoading("Memuat detail...");
     const res = await Api.get(`/invoices/${inv.id}/print`);
+    hideLoading();
     const d = res.invoice;
     const m = d.meta || {};
 
@@ -341,6 +355,7 @@ window.printInvoice = async i => {
     w.document.write(html);
     w.document.close();
   } catch (err) {
+    hideLoading();
     console.error("Gagal print nota:", err);
     toast("⚠️ Gagal mencetak nota");
   }

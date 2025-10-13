@@ -65,9 +65,22 @@ async function apiRequest(endpoint, method = "GET", body = null, useAuth = true)
 
     return handleResponse(res);
   } catch (err) {
-    console.error("API Error:", err);
+    // console.error("API Error:", err);
+
+    if (err.message && err.message.includes("Sesi habis")) {
+        toast("🔒 Sesi habis. Silakan login ulang.");
+        clearTokens();
+
+        hide($('dashboardSection'));
+        hide($('authSection'));
+        showSection('landing');
+        return;
+    }
+
+    if (typeof toast === "function")
+        toast("❌ " + (err.detail || err.message || "Terjadi kesalahan."));
     throw err;
-  }
+    }
 }
 
 async function handleResponse(res) {

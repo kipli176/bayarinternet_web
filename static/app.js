@@ -3,31 +3,49 @@
    Version: app.js (v1.1)
    Stage: Base SPA with working register toggle
    ========================================================= */
-
+/* =========================================================
+   Custom History Back Handler (v1.2r2)
+   ========================================================= */
 window.addEventListener("load", () => {
-  // Ganti history sekarang supaya posisi awal "terkunci"
-  history.replaceState(null, "", location.href);
+  // Lock posisi awal
+  history.replaceState({ page: "splash" }, "", location.href);
 
-  // Tambahkan satu dummy state ke depan
-  history.pushState(null, "", location.href);
+  // Tambahkan dummy agar tombol back aktif
+  history.pushState({ page: "landing" }, "", location.href);
 
-  // Dengarkan event popstate
+  // Dengarkan event back
   window.addEventListener("popstate", (event) => {
-    // Dorong kembali dummy state agar tidak mundur
-    history.pushState(null, "", location.href);
+  const state = event.state?.page;
 
-    // Tangani kondisi SPA kamu di sini
-    const modal = document.getElementById('modal');
-    if (modal && !modal.classList.contains('hidden')) {
-      closeModal();
-    } else {
-      const backButton = document.querySelector('[data-nav="dashboard"]');
-      if (backButton) backButton.click();
-    }
-  });
+  // Jika modal terbuka → tutup modal dulu
+  const modal = $('modal');
+  if (modal && !modal.classList.contains('hidden')) {
+    closeModal();
+    return;
+  }
+
+  // Jika sedang di auth → kembali ke landing
+  if ($('authSection') && !$('authSection').classList.contains('hidden')) {
+    hide($('authSection')); // ✅ perbaiki id
+    showSection('landing', false); // ✅ tanpa pushState baru
+    return;
+  }
+
+  // Jika bukan dashboard (mis. users, invoices, dll)
+  const visibleSection = document.querySelector('.page-section:not(.hidden)');
+  if (visibleSection && !['dashboardSection', 'landingSection'].includes(visibleSection.id)) {
+    showSection('dashboard', false);
+    return;
+  }
+
+  // Jika sudah di landing → tetap di landing (hindari loop)
+  if (visibleSection && visibleSection.id === 'landingSection') {
+    return;
+  }
 });
 
-
+});
+ 
 
 const $ = id => document.getElementById(id);
 const show = el => { if (el) el.classList.remove('hidden'); };
@@ -44,7 +62,8 @@ async function ensureAuth() {
     await refreshToken();
     if (!isLoggedIn()) {
       toast("🔒 Sesi berakhir, silakan login kembali");
-      showSection("auth");
+      hide($('dashboardSection'));
+      showSection('landing');
       return false;
     }
   }
@@ -58,7 +77,32 @@ function toast(msg) {
   t.style.opacity = 1;
   setTimeout(() => { t.style.opacity = 0; }, 2000);
 }
+// =========================================================
+// 🔄 Overlay Loading Spinner Global
+// =========================================================
+function showLoading(message = "Memproses...") {
+  // Jika sudah ada overlay, jangan buat dua kali
+  if (document.getElementById("loadingOverlay")) return;
 
+  const overlay = document.createElement("div");
+  overlay.id = "loadingOverlay";
+  overlay.className = `
+    fixed inset-0 z-[9999] flex flex-col items-center justify-center 
+    bg-black/40 backdrop-blur-sm
+  `;
+  overlay.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-5 py-4 rounded-2xl shadow-lg flex flex-col items-center gap-3">
+      <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent"></div>
+      <p class="text-sm font-medium">${message}</p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) overlay.remove();
+}
 // Net status
 const net = $('netStatus');
 function netStatus(msg, color) {
@@ -71,52 +115,94 @@ window.addEventListener('offline', () => netStatus('⚠️ Anda offline', '#dc26
 window.addEventListener('online', () => netStatus('✅ Koneksi aktif', '#16a34a'));
 if (!navigator.onLine) netStatus('⚠️ Anda offline', '#dc2626');
 
-// Splash
+/* =========================================================
+   Navigasi Awal Otomatis (Splash → Landing/Auth/Dashboard)
+   ========================================================= */
 window.addEventListener('load', async () => {
   const splash = $('splashSection');
-  const token = getAccessToken();
+  const hasToken = isLoggedIn();
 
-  // Coba refresh token jika ada
-  if (token) {
-    await refreshToken().catch(() => clearTokens());
-  }
-
-  setTimeout(() => {
+  // Tutup splash setelah animasi singkat
+  setTimeout(async () => {
     splash.classList.add('fade-out');
     setTimeout(async () => {
       hide(splash);
-      if (isLoggedIn()) {
-        showSection('dashboard');
-        if (!(await ensureAuth())) return;
-        refreshDashboard();
+
+      // Jika sudah login → cek token dan masuk dashboard
+      if (hasToken) {
+        const valid = await refreshToken();
+        if (valid) {
+          showSection('dashboard');
+          setTimeout(refreshDashboard, 300);
+        } else {
+          clearTokens();
+          toast('🔒 Sesi habis. Silakan login ulang.');
+          hideLoading();
+          showSection('landing');
+        }
       } else {
-        showSection('auth');
+        hideLoading();
+        showSection('landing');
       }
+
+
     }, 600);
-  }, 2000);
+  }, 1500);
 });
 
-// =========================================================
-// Section Handler (v1.5r3)
-// =========================================================
-function showSection(name) {
-  const all = document.querySelectorAll('.page-section');
 
+
+// =========================================================
+// Section Handler (v1.6r4) — fix section nyantol saat back
+// =========================================================
+function showSection(name, push = true) {
+  const all = document.querySelectorAll('.page-section');
   all.forEach(sec => {
-    if (sec.id === name + 'Section') return;
+    sec.classList.add('hidden');
     sec.classList.remove('active');
-    // beri delay sebelum hidden biar transisi keluar kelihatan
-    setTimeout(() => sec.classList.add('hidden'), 350);
   });
 
   const target = $(name + 'Section');
   if (target) {
-    target.classList.remove('hidden');
-    // timeout kecil agar CSS transition sempat membaca state awal
-    setTimeout(() => target.classList.add('active'), 30);
+    hide(target);
+    setTimeout(() => {
+      target.classList.remove('hidden');
+      target.classList.add('active');
+    }, 20);
+  }
+
+  // hanya tambah history kalau push = true
+  if (push) {
+    history.pushState({ page: name }, "", location.href);
   }
 }
 
+
+
+
+
+  // Simple auto slider
+  const carousel = document.getElementById('carousel');
+  const dots = [document.getElementById('dot1'), document.getElementById('dot2')];
+  let index = 0;
+
+  function showSlide(i) {
+    index = i;
+    carousel.style.transform = `translateX(-${i * 100}%)`;
+    dots.forEach((d, idx) => {
+      d.classList.toggle('bg-primary/80', idx === i);
+      d.classList.toggle('bg-gray-400', idx !== i);
+      d.classList.toggle('dark:bg-gray-600', idx !== i);
+    });
+  }
+
+  // Klik dot manual
+  dots.forEach((dot, i) => dot.addEventListener('click', () => showSlide(i)));
+
+  // Auto rotate
+  setInterval(() => {
+    showSlide((index + 1) % 2);
+  }, 4000);
 
 
 
@@ -129,42 +215,60 @@ $('toggleLogin').addEventListener('click', () => {
   hide($('registerBox'));
   show($('loginBox'));
 });
-
-// Login
-$('btnLogin').addEventListener('click', async () => {
+// =========================================================
+// 🔐 LOGIN
+// =========================================================
+$('btnLogin').addEventListener('click', async (e) => {
+  e.preventDefault(); // ⛔ cegah reload form
   const email = $('loginEmail').value.trim();
   const pass = $('loginPassword').value.trim();
-  if (!email || !pass) return toast('❗ Lengkapi data login');
 
+  // ✅ Validasi sebelum apapun
+  if (!email || !pass) {
+    toast('⚠️ Lengkapi semua field');
+    return;
+  }
+
+  showLoading('Memproses login...'); // ⏳ hanya dijalankan kalau valid
   try {
     await login(email, pass);
     toast('✅ Login berhasil');
-    setTimeout(async () => {
-      hide($('authSection'));
-      showSection('dashboard');
-      if (!(await ensureAuth())) return;
-      refreshDashboard();
-    }, 800);
+    hide($('authSection'));
+    showSection('dashboard');
+    refreshDashboard();
   } catch (err) {
-    toast('❌ ' + (err.detail || 'Gagal login'));
+    toast('❌ ' + (err.detail || err.message || 'Gagal login'));
+  } finally {
+    hideLoading();
   }
 });
 
 
-// Register
-$('btnRegister').addEventListener('click', async () => {
+// =========================================================
+// 🧾 REGISTER
+// =========================================================
+$('btnRegister').addEventListener('click', async (e) => {
+  e.preventDefault();
   const nama = $('regNama').value.trim();
   const email = $('regEmail').value.trim();
   const pass = $('regPassword').value.trim();
-  if (!nama || !email || !pass) return toast('❗ Lengkapi semua data');
 
+  // ✅ Validasi dulu
+  if (!nama || !email || !pass) {
+    toast('⚠️ Lengkapi semua field');
+    return;
+  }
+
+  showLoading('Memproses registrasi...');
   try {
     await register(nama, email, pass);
     toast('✅ Akun berhasil dibuat');
     hide($('registerBox'));
     show($('loginBox'));
   } catch (err) {
-    toast('❌ ' + (err.detail || 'Registrasi gagal'));
+    toast('❌ ' + (err.detail || err.message || 'Registrasi gagal'));
+  } finally {
+    hideLoading();
   }
 });
 
@@ -172,26 +276,44 @@ $('btnRegister').addEventListener('click', async () => {
 // Logout
 $('logoutBtn').addEventListener('click', async () => {
   await logout();
-  toast('👋 Keluar');
-  setTimeout(() => {
-    hide($('dashboardSection'));
-    showSection('auth');
-  }, 800);
+  toast('👋 Anda telah keluar');
+  hide($('dashboardSection'));
+  hideLoading();
+  showSection('landing');
 });
 
 
 
-let deferredPrompt;window.addEventListener('beforeinstallprompt', (e) => {
+let deferredPrompt = null;
+
+// Simpan event install tapi jangan munculkan popup langsung
+window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
+  console.log("✅ PWA siap diinstal — menunggu aksi pengguna...");
+
+  // Tampilkan tombol kecil "Install" (opsional)
+  const trigger = document.getElementById('installTrigger');
+  if (trigger) trigger.classList.remove('hidden');
+});
+
+// Klik tombol "Install" untuk memunculkan popup custom
+async function showInstallPopup() {
+  if (!deferredPrompt) {
+    toast("ℹ️ Aplikasi sudah bisa diinstal nanti dari browser");
+    return;
+  }
 
   // Jika popup sudah ada, jangan buat dua kali
   if (document.getElementById('installPopup')) return;
 
-  // Buat overlay semi-transparan (opsional, klik di luar = tutup)
+  // Buat overlay
   const overlay = document.createElement('div');
   overlay.id = 'installOverlay';
-  overlay.className = 'fixed inset-0 bg-black/30 backdrop-blur-sm z-40 opacity-0 transition-opacity duration-300';
+  overlay.className = `
+    fixed inset-0 bg-black/30 backdrop-blur-sm z-40 
+    opacity-0 transition-opacity duration-300
+  `;
   document.body.appendChild(overlay);
 
   // Buat popup (bottom sheet style)
@@ -209,7 +331,7 @@ let deferredPrompt;window.addEventListener('beforeinstallprompt', (e) => {
       <button id="btnCloseInstall" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 text-lg">&times;</button>
     </div>
     <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-      Pasang aplikasi ini agar bisa diakses lebih cepat.
+      Pasang aplikasi ini agar bisa diakses lebih cepat langsung dari layar utama.
     </p>
     <div class="flex justify-end gap-3">
       <button id="btnLaterInstall" class="text-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -222,14 +344,13 @@ let deferredPrompt;window.addEventListener('beforeinstallprompt', (e) => {
   `;
   document.body.appendChild(popup);
 
-  // Sedikit animasi masuk
+  // Animasi masuk
   requestAnimationFrame(() => {
     overlay.classList.add('opacity-100');
     popup.classList.remove('translate-y-full');
-  if (navigator.vibrate) navigator.vibrate(20);
   });
 
-  // Tutup popup fungsi
+  // Fungsi tutup popup
   function closeInstallPopup() {
     popup.classList.add('translate-y-full');
     overlay.classList.remove('opacity-100');
@@ -239,26 +360,60 @@ let deferredPrompt;window.addEventListener('beforeinstallprompt', (e) => {
     }, 300);
   }
 
-  // Klik tombol Pasang
-  $('btnInstallApp').addEventListener('click', async () => {
+  // Tombol Pasang (disini aman untuk vibrate dan prompt)
+  document.getElementById('btnInstallApp').addEventListener('click', async () => {
+    if (navigator.vibrate) navigator.vibrate(30); // ✅ hanya saat user klik
     closeInstallPopup();
-    deferredPrompt.prompt();
+    deferredPrompt.prompt(); // ✅ panggil prompt di dalam event klik
+
     const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') toast('✅ Aplikasi terpasang');
+    if (result.outcome === 'accepted') {
+      toast('✅ Aplikasi terpasang');
+    } else {
+      toast('ℹ️ Instalasi dibatalkan');
+    }
     deferredPrompt = null;
   });
 
-  // Klik Nanti / Tutup / Overlay
-  $('btnLaterInstall').addEventListener('click', closeInstallPopup);
-  $('btnCloseInstall').addEventListener('click', closeInstallPopup);
+  // Tutup popup (Nanti / X / klik luar)
+  document.getElementById('btnLaterInstall').addEventListener('click', closeInstallPopup);
+  document.getElementById('btnCloseInstall').addEventListener('click', closeInstallPopup);
   overlay.addEventListener('click', closeInstallPopup);
-});
+}
 
-
+// Event jika sudah terinstal
 window.addEventListener('appinstalled', () => {
   const popup = document.getElementById('installPopup');
   if (popup) popup.remove();
+  const trigger = document.getElementById('installTrigger');
+  if (trigger) trigger.classList.add('hidden');
   toast('📲 Aplikasi siap digunakan');
+});
+document.getElementById('installTrigger').addEventListener('click', showInstallPopup);
+
+
+// Navigasi antar halaman
+document.querySelectorAll('[data-nav]').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const target = e.currentTarget.dataset.nav;
+    const sections = ['dashboard', 'users', 'invoices', 'profiles', 'settings', 'auth', 'payments'];
+    sections.forEach(id => hide($(id + 'Section')));
+    // show($(target + 'Section'));
+    showSection(target);
+    if (target === 'dashboard') refreshDashboard();
+    if (target === 'users') renderUsers();
+    if (target === 'invoices') renderInvoices(); 
+    if (target === 'profiles') renderProfiles();
+    if (target === 'payments') renderPayments();
+  });
+});
+
+/* =========================================================
+   Navigasi Landing Page → Auth
+   ========================================================= */
+['toLogin', 'toRegister', 'btnGetStarted', 'btnCTA'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('click', () => showSection('auth'));
 });
 
 // /* =========================================================
@@ -1168,20 +1323,3 @@ function closeModal() {
 
 // });
  
-
-
-// Navigasi antar halaman
-document.querySelectorAll('[data-nav]').forEach(btn => {
-  btn.addEventListener('click', e => {
-    const target = e.currentTarget.dataset.nav;
-    const sections = ['dashboard', 'users', 'invoices', 'invoices', 'profiles', 'settings', 'auth', 'payments'];
-    sections.forEach(id => hide($(id + 'Section')));
-    // show($(target + 'Section'));
-    showSection(target);
-    if (target === 'users') renderUsers();
-    if (target === 'invoices') renderInvoices(); 
-    if (target === 'profiles') renderProfiles();
-    if (target === 'payments') renderPayments();
-  });
-});
-

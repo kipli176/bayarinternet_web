@@ -13,11 +13,11 @@ let userPagination = { page: 1, per_page: 20, total: 0 };
 // 🔹 Ambil data Profiles
 // =========================================================
 async function loadProfiles() {
-  try {
-    const res = await Api.get("/profiles");
+  try { 
+    const res = await Api.get("/profiles"); 
     profiles = res?.data || [];
     localStorage.setItem("cached_profiles", JSON.stringify(profiles));
-  } catch (err) {
+  } catch (err) { 
     console.warn("⚠️ Offline mode: pakai cache profiles");
     const cache = localStorage.getItem("cached_profiles");
     if (cache) profiles = JSON.parse(cache);
@@ -64,8 +64,8 @@ async function loadUsers(page = 1) {
   params.append("page", page);
   params.append("per_page", userPagination.per_page);
 
-  try {
-    const res = await Api.get(`/users?${params.toString()}`);
+  try { 
+    const res = await Api.get(`/users?${params.toString()}`); 
     users = res?.data || [];
     userPagination = {
       page: res.page || 1,
@@ -76,7 +76,7 @@ async function loadUsers(page = 1) {
       "cached_users",
       JSON.stringify({ users, userPagination })
     );
-  } catch (err) {
+  } catch (err) { 
     console.warn("⚠️ Offline mode: pakai cache users");
     const cache = localStorage.getItem("cached_users");
     if (cache) {
@@ -124,10 +124,10 @@ function renderUsers() {
         </td>
 
         <td class="p-2 text-center flex items-center justify-center gap-2">
-          <button title="Detail" class="text-primary" onclick="viewUserDetail(${i})">🧾</button>
-          <button title="Edit" class="text-blue-600" onclick="editUser(${i})">✏️</button>
-          <button title="Ubah status" class="text-yellow-600" onclick="toggleStatus(${i})">🔄</button>
-          <button title="Hapus" class="text-red-600" onclick="deleteUser(${i})">🗑️</button>
+          <button title="Detail" class="text-primary text-lg" onclick="viewUserDetail(${i})">🧾</button>
+          <button title="Edit" class="text-blue-600 text-lg" onclick="editUser(${i})">✏️</button>
+          <button title="Ubah status" class="text-yellow-600 text-lg" onclick="toggleStatus(${i})">🔄</button>
+          <button title="Hapus" class="text-red-600 text-lg" onclick="deleteUser(${i})">🗑️</button>
         </td>
       </tr>
       `;
@@ -221,7 +221,9 @@ $("btnAddUser").addEventListener("click", async () => {
         return toast("❗ Lengkapi semua data utama");
 
       try {
+        showLoading("Tunggu sebentar...");
         await Api.post("/users", data);
+        hideLoading();
         toast("✅ Pelanggan ditambahkan");
         closeModal();
 
@@ -242,6 +244,7 @@ $("btnAddUser").addEventListener("click", async () => {
         setTimeout(() => loadUsers(), 1000);
 
       } catch (err) {
+        hideLoading();
         toast("⚠️ Offline: data disimpan lokal");
         addPendingOp("add", data);
         closeModal();
@@ -293,7 +296,9 @@ window.editUser = async i => {
       };
 
       try {
+        showLoading("Tunggu sebentar...");
         await Api.put(`/users/${u.id}`, data);
+        hideLoading();
         toast("✏️ Data pelanggan diperbarui");
         closeModal();
 
@@ -314,6 +319,7 @@ window.editUser = async i => {
         setTimeout(() => loadUsers(), 1000);
 
       } catch {
+        hideLoading();
         toast("⚠️ Offline: perubahan disimpan lokal");
         addPendingOp("edit", { id: u.id, data });
         closeModal();
@@ -330,10 +336,13 @@ window.toggleStatus = async i => {
   const newStatus = u.status === "active" ? "suspended" : "active";
 
   try {
+    showLoading("Memuat detail...");
     await Api.patch(`/users/${u.id}/status?status=${newStatus}`);
+    hideLoading();
     toast(`🔄 Status diubah menjadi ${newStatus}`);
     await loadUsers(userPagination.page);
   } catch (err) {
+    hideLoading();
     addPendingOp("status", { id: u.id, status: newStatus });
     toast("⚠️ Offline: status disimpan lokal");
   }
@@ -352,7 +361,9 @@ window.deleteUser = async i => {
 
   setTimeout(async () => {
     try {
+      showLoading("Memuat detail...");
       await Api.del(`/users/${u.id}`);
+      hideLoading();
       toast("🗑️ Pelanggan dihapus");
 
       // Hapus langsung dari array lokal agar tabel update instan
@@ -362,6 +373,7 @@ window.deleteUser = async i => {
       // Sinkron ulang dari server agar data tetap akurat
       setTimeout(() => loadUsers(userPagination?.page || 1), 800);
     } catch {
+      hideLoading();
       addPendingOp("delete", { id: u.id });
       toast("⚠️ Offline: penghapusan disimpan lokal");
 

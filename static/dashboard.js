@@ -71,18 +71,22 @@ async function updateMonthlyIncome() {
 // =========================================================
 // Tampilkan Tabel Invoice Reseller (dari /reseller-invoices/me)
 // =========================================================
+// =========================================================
+// Tampilkan Tabel Invoice Reseller (dari /reseller-invoices/me)
+// =========================================================
 async function renderResellerInvoicesTable() {
   const tableBody = $("resellerInvoiceTable");
   const section = $("resellerInvoiceSection");
   const nav = document.querySelector("nav");
 
-  // Set tampilan awal
+  // Tampilan awal
   tableBody.innerHTML = `
     <tr>
       <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">
         Memuat data...
       </td>
-    </tr>`;
+    </tr>
+  `;
 
   try {
     const now = new Date();
@@ -94,37 +98,40 @@ async function renderResellerInvoicesTable() {
     const invoices = res?.data || [];
     window.resellerInvoices = invoices;
 
-    if (!invoices.length) {
-      // ❌ Tidak ada invoice — sembunyikan tabel, tampilkan navigasi
+    // 🔍 Cek apakah ada invoice yang belum dibayar
+    const unpaidInvoices = invoices.filter(inv => inv.status === "unpaid");
+
+    if (unpaidInvoices.length === 0) {
+      // ✅ Semua sudah paid — tampilkan navigasi, sembunyikan tabel
       section.classList.add("hidden");
       nav.classList.remove("hidden");
       return;
     }
 
-    // ✅ Ada invoice — tampilkan tabel, sembunyikan navigasi
+    // ✅ Ada unpaid — tampilkan tabel, sembunyikan navigasi
     section.classList.remove("hidden");
     nav.classList.add("hidden");
 
-    tableBody.innerHTML = invoices.map((inv, i) => `
-    <tr>
+    // Render hanya invoice yang belum dibayar
+    tableBody.innerHTML = unpaidInvoices.map((inv, i) => `
+      <tr>
         <td class="p-2 text-left">
-        ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}
+          ${formatDate(inv.period_start)} - ${formatDate(inv.period_end)}
         </td>
         <td class="p-2 text-center">${inv.users_count}</td>
         <td class="p-2 text-right">Rp ${Number(inv.total).toLocaleString("id-ID")}</td>
         <td class="p-2 text-center">
-        <span class="px-2 py-1 rounded text-xs ${
-            inv.status === "paid"
-            ? "bg-green-100 text-green-700"
-            : "bg-yellow-100 text-yellow-700"
-        }">${inv.status}</span>
+          <span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700">
+            ${inv.status}
+          </span>
         </td>
         <td class="p-2 text-center">
           <button title="Detail" class="text-primary" onclick="viewResellerInvoiceDetail(${i})">🧾</button> 
           <button title="Print" class="text-indigo-600" onclick="printResellerInvoice(${i})">🖨️</button> 
         </td>
-    </tr>
-    `).join(""); 
+      </tr>
+    `).join("");
+
   } catch (err) {
     console.error("Gagal ambil reseller invoices:", err);
     tableBody.innerHTML = `
@@ -132,9 +139,11 @@ async function renderResellerInvoicesTable() {
         <td colspan="5" class="text-center py-4 text-gray-500 dark:text-gray-400">
           Gagal memuat data
         </td>
-      </tr>`;
+      </tr>
+    `;
   }
 }
+
 
 // Helper tanggal pendek
 function formatDate(dateStr) {
@@ -150,7 +159,10 @@ window.viewResellerInvoiceDetail = async i => {
   if (!inv) return toast("❗ Data tidak ditemukan");
 
   try {
+    showLoading("Memuat detail...");
     const d = await Api.get(`/reseller-invoices/${inv.id}`);
+    hideLoading();
+
     const m = d.meta || {};
 
     openModal({
@@ -177,6 +189,7 @@ window.viewResellerInvoiceDetail = async i => {
 
     $("modalSave").textContent = "Tutup";
   } catch (err) {
+    hideLoading();
     console.error("Gagal ambil detail invoice reseller:", err);
     toast("⚠️ Gagal memuat detail invoice reseller");
   }
@@ -191,7 +204,10 @@ window.printResellerInvoice = async i => {
   if (!inv) return toast("❗ Data tidak ditemukan");
 
   try {
+    showLoading("Menyiapkan cetak...");
     const res = await Api.get(`/reseller-invoices/${inv.id}/print`);
+    hideLoading();
+
     const d = res.invoice;
     const m = d.meta || {};
     const reseller = JSON.parse(localStorage.getItem("resellerProfile") || "{}");
@@ -262,6 +278,7 @@ window.printResellerInvoice = async i => {
     w.document.write(html);
     w.document.close();
   } catch (err) {
+    hideLoading();
     console.error("Gagal print invoice reseller:", err);
     toast("⚠️ Gagal mencetak invoice reseller");
   }

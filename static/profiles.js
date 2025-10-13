@@ -25,7 +25,9 @@ async function loadProfiles(page = 1) {
   `;
 
   try {
+    showLoading("Tunggu sebentar...");
     const res = await Api.get(`/profiles?${params.toString()}`);
+    hideLoading();
     profiles = res?.data || [];
     profilePagination = {
       page: res.page || 1,
@@ -34,6 +36,7 @@ async function loadProfiles(page = 1) {
     };
     localStorage.setItem("cached_profiles", JSON.stringify({ profiles, profilePagination }));
   } catch (err) {
+    hideLoading();
     console.warn("⚠️ Offline mode: pakai cache profiles");
     const cache = localStorage.getItem("cached_profiles");
     if (cache) {
@@ -71,9 +74,9 @@ function renderProfiles(search = "") {
           }">${p.is_active ? "Aktif" : "Nonaktif"}</span>
         </td>
         <td class="p-2 text-center flex items-center justify-center gap-2">
-          <button title="Detail" class="text-primary" onclick="viewProfile(${i})">🧾</button>
-          <button title="Edit" class="text-blue-600" onclick="editProfile(${i})">✏️</button>
-          <button title="Hapus" class="text-red-600" onclick="deleteProfile(${i})">🗑️</button>
+          <button title="Detail" class="text-primary text-lg" onclick="viewProfile(${i})">🧾</button>
+          <button title="Edit" class="text-blue-600 text-lg" onclick="editProfile(${i})">✏️</button>
+          <button title="Hapus" class="text-red-600 text-lg" onclick="deleteProfile(${i})">🗑️</button>
         </td>
       </tr>`
           )
@@ -114,37 +117,37 @@ $("btnAddProfile")?.addEventListener("click", () => {
     title: "Tambah Paket Internet",
     body: `
       <div class="space-y-2 text-sm">
-        <select id="profileType" class="w-full border p-2 rounded">
+        <select id="profileType" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
           <option value="group">Group</option>
           <option value="custom">Custom Speed</option>
           <option value="calculator">Calculator</option>
         </select>
-        <input id="profileName" placeholder="Nama Paket" class="w-full border p-2 rounded">
-        <input id="profilePrice" type="number" placeholder="Harga" class="w-full border p-2 rounded">
+        <input id="profileName" placeholder="Nama Paket" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+        <input id="profilePrice" type="number" placeholder="Harga" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
         
         <!-- Group Fields -->
         <div id="groupFields" class="space-y-2">
-          <input id="groupName" placeholder="Nama Group" class="w-full border p-2 rounded">
+          <input id="groupName" placeholder="Nama Group" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
         </div>
 
         <!-- Custom Fields -->
         <div id="customFields" class="hidden space-y-2">
-          <input id="rateUp" placeholder="Rate Limit Up (10M)" class="w-full border p-2 rounded">
-          <input id="rateDown" placeholder="Rate Limit Down (10M)" class="w-full border p-2 rounded">
-          <input id="burstUp" placeholder="Burst Limit Up" class="w-full border p-2 rounded">
-          <input id="burstDown" placeholder="Burst Limit Down" class="w-full border p-2 rounded">
-          <input id="burstTimeUp" type="number" placeholder="Burst Time Up (detik)" class="w-full border p-2 rounded">
-          <input id="burstTimeDown" type="number" placeholder="Burst Time Down (detik)" class="w-full border p-2 rounded">
-          <input id="priority" type="number" placeholder="Prioritas" class="w-full border p-2 rounded">
-          <input id="minUp" placeholder="Min Rate Up" class="w-full border p-2 rounded">
-          <input id="minDown" placeholder="Min Rate Down" class="w-full border p-2 rounded">
+          <input id="rateUp" placeholder="Rate Limit Up (10M)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="rateDown" placeholder="Rate Limit Down (10M)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="burstUp" placeholder="Burst Limit Up" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="burstDown" placeholder="Burst Limit Down" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="burstTimeUp" type="number" placeholder="Burst Time Up (detik)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="burstTimeDown" type="number" placeholder="Burst Time Down (detik)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="priority" type="number" placeholder="Prioritas" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="minUp" placeholder="Min Rate Up" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
+          <input id="minDown" placeholder="Min Rate Down" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
         </div>
 
         <!-- Calculator Fields -->
         <div id="calculatorFields" class="hidden space-y-2">
-          <select id="calcUp" class="w-full border p-2 rounded"></select>
-          <select id="calcDown" class="w-full border p-2 rounded"></select>
-          <textarea id="calcOut" readonly class="w-full border p-2 rounded bg-gray-100 text-xs"></textarea>
+          <select id="calcUp" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400"></select>
+          <select id="calcDown" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400"></select>
+          <textarea id="calcOut" readonly class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary bg-white/70 text-gray-800 dark:bg-transparent dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400"></textarea>
           <p class="text-xs text-gray-500">
             Rumus: <b>Burst</b> = 3×Rate, <b>Threshold</b> = 70%×Rate, 
             <b>Min Rate</b> = 60%×Rate, <b>Priority</b> = 8, <b>Burst Time</b> = 12/12.
@@ -178,7 +181,9 @@ $("btnAddProfile")?.addEventListener("click", () => {
       }
 
       try {
+        showLoading("Tunggu sebentar...");
         const res = await Api.post("/profiles", data);
+        hideLoading();
         toast("✅ Paket ditambahkan");
         closeModal();
 
@@ -199,6 +204,7 @@ $("btnAddProfile")?.addEventListener("click", () => {
         // Sinkronisasi ke server penuh
         setTimeout(() => loadProfiles(), 1000);
       } catch {
+        hideLoading();
         toast("⚠️ Offline: data disimpan lokal");
         addPendingProfileOp("add", data);
         closeModal();
@@ -336,7 +342,9 @@ window.editProfile = i => {
       }
 
       try {
+        showLoading("Tunggu sebentar...");
         await Api.put(`/profiles/${p.id}`, data);
+        hideLoading();
         toast("✏️ Paket diperbarui");
         closeModal();
 
@@ -355,11 +363,12 @@ window.editProfile = i => {
         // Sinkronisasi penuh dari server 1 detik kemudian
         setTimeout(() => loadProfiles(), 1000);
         } catch {
-        toast("⚠️ Offline: perubahan disimpan lokal");
-        addPendingProfileOp("edit", { id: p.id, data });
-        closeModal();
-        profiles[i] = { ...p, ...data };
-        renderProfiles();
+            hideLoading();
+            toast("⚠️ Offline: perubahan disimpan lokal");
+            addPendingProfileOp("edit", { id: p.id, data });
+            closeModal();
+            profiles[i] = { ...p, ...data };
+            renderProfiles();
         }
 
     },
@@ -382,7 +391,9 @@ window.deleteProfile = async i => {
   }
 
   try {
+    showLoading("Tunggu sebentar...");
     await Api.del(`/profiles/${p.id}`);
+    hideLoading();
     toast("🗑️ Paket dihapus");
 
     // Delay sedikit sebelum hapus dari array dan render ulang
@@ -392,6 +403,7 @@ window.deleteProfile = async i => {
       setTimeout(() => loadProfiles(), 1000); // sinkron server
     }, 400);
   } catch {
+    hideLoading();
     toast("⚠️ Offline: penghapusan disimpan lokal");
     addPendingProfileOp("delete", { id: p.id });
 
@@ -410,7 +422,9 @@ window.deleteProfile = async i => {
 window.viewProfile = async i => {
   const p = profiles[i];
   try {
+    showLoading("Tunggu sebentar...");
     const d = await Api.get(`/profiles/${p.id}`);
+    hideLoading();
     const body = d.group_name
       ? `
         <p><b>Nama Paket:</b> ${d.name}</p>
@@ -430,6 +444,7 @@ window.viewProfile = async i => {
     });
     $("modalSave").textContent = "Tutup";
   } catch {
+    hideLoading();
     toast("⚠️ Gagal memuat detail paket");
   }
 };
